@@ -98,6 +98,9 @@ function! s:parse_csvline(line)
         if empty(m)
             throw 'failed to parse'
         endif
+        if line[0] ==# '"'
+            let m[1] = substitute(m[1], '""', '"', 'g')
+        endif
         call add(cols, m[1])
         let line = m[2]
     endwhile
