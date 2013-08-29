@@ -25,6 +25,10 @@ function! s:open_buffer(book, bang)
 
     enew!
     silent file `=a:book.get_filename()`
+    augroup excel
+        autocmd!
+        autocmd InsertEnter * call s:on_insert_enter()
+    augroup END
     setlocal buftype=nofile bufhidden=unload noswapfile nobuflisted
     setfiletype excel
 
@@ -40,6 +44,9 @@ function! s:open_buffer(book, bang)
     endtry
 endfunction
 
+function! s:on_insert_enter()
+    " TODO: Change 'Cell.Text' to 'Cell.Value'.
+endfunction
 
 
 
