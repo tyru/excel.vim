@@ -29,6 +29,16 @@ function! s:open_buffer(book, bang)
         autocmd!
         autocmd InsertEnter * call s:on_insert_enter()
     augroup END
+    nnoremap <silent><buffer> <Plug>(excel-move-h) :<C-u>call <SID>map_move('h')<CR>
+    nnoremap <silent><buffer> <Plug>(excel-move-j) :<C-u>call <SID>map_move('j')<CR>
+    nnoremap <silent><buffer> <Plug>(excel-move-k) :<C-u>call <SID>map_move('k')<CR>
+    nnoremap <silent><buffer> <Plug>(excel-move-l) :<C-u>call <SID>map_move('l')<CR>
+    " nnoremap <silent><buffer> <Plug>(excel-edit-cell) :<C-u>call <SID>map_edit_cell()<CR>
+    nmap <silent><buffer> h <Plug>(excel-move-h)
+    nmap <silent><buffer> j <Plug>(excel-move-j)
+    nmap <silent><buffer> k <Plug>(excel-move-k)
+    nmap <silent><buffer> l <Plug>(excel-move-l)
+    " nmap <silent><buffer> i <Plug>(excel-edit-cell)
     setlocal buftype=nofile bufhidden=unload noswapfile nobuflisted
     setfiletype excel
 
@@ -42,10 +52,56 @@ function! s:open_buffer(book, bang)
         call s:error('Cannot set excel content to buffer.')
         call s:error(v:exception . ' ' . v:throwpoint)
     endtry
+
+    " Put cursor on A1 cell.
+    " TODO: Get beginning cursor pos in excel book.
+    call cursor(1, 1)
 endfunction
 
 function! s:on_insert_enter()
     " TODO: Change 'Cell.Text' to 'Cell.Value'.
+endfunction
+
+function! s:map_move(cmd)
+    let [x, y] = s:get_cell_pos()
+    let [x, y] = get({
+    \   'h': [x - 1, y],
+    \   'j': [x, y + 1],
+    \   'k': [x, y - 1],
+    \   'l': [x + 1, y],
+    \}, a:cmd, [-1, -1])
+    call s:set_cell_pos(x, y)
+endfunction
+
+function! s:get_cell_pos()
+    let x = len(substitute(getline('.')[: col('.') - 1], '[^\t]', '', 'g'))
+    let y = line('.') - 1
+    return [x, y]
+endfunction
+
+function! s:set_cell_pos(x, y)
+    if a:y < 0 || a:y >= line('$')
+        return
+    endif
+    let lnum = a:y + 1
+    let most_right_cell = len(substitute(getline(lnum), '[^\t]', '', 'g'))
+    if a:x < 0 || a:x > most_right_cell
+        return
+    endif
+
+    if a:x is 0
+        let col = 1
+    else
+        let cols = split(getline(lnum), '\([^\t]*\zs\%(\t\|$\)\)', 1)
+        " Remove empty string at the end of list.
+        let cols = cols[: -2]
+        if empty(cols)
+            let col = 1
+        else
+            let col = len(join(cols[: a:x - 1], "\t")) + 2
+        endif
+    endif
+    call cursor(lnum, col)
 endfunction
 
 
@@ -84,6 +140,7 @@ function! s:com_get_lines(file)
     let lines = []
     for csvline in csvlines
         let cols = s:parse_csvline(csvline)
+        call map(cols, 'substitute(v:val, "\\t", " ", "g")')
         call add(lines, join(cols, "\t"))
     endfor
     return lines
